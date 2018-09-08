@@ -33,19 +33,28 @@ import android.view.View;
 import com.none.tom.exiferaser.R;
 
 import static com.none.tom.exiferaser.util.Constants.KEY_INVERT;
+import static com.none.tom.exiferaser.util.Constants.KEY_SHARED_PREFS;
 import static com.none.tom.exiferaser.util.Constants.REQUEST_CODE_CREATE_DOCUMENT;
 import static com.none.tom.exiferaser.util.Constants.REQUEST_CODE_OPEN_DOCUMENT;
 
 public class Utils {
-    public static boolean containsExif(final byte[] jpeg) {
-        for (int i = 0; i < jpeg.length; i++) {
-            // Check for presence of the Exif header, typically after SOI
-            if (jpeg[i] == 0x45 && jpeg[i + 1] == 0x78 && jpeg[i + 2] == 0x69 &&
-                    jpeg[i + 3] == 0x66 && jpeg[i + 4] == 0x00 && jpeg[i + 5] == 0x00) {
-                return true;
-            }
-        }
-        return false;
+    @NonNull
+    private static SharedPreferences getSharedPreferences(@NonNull final Context context) {
+        return context.getSharedPreferences(KEY_SHARED_PREFS, Context.MODE_PRIVATE);
+    }
+
+    @SuppressWarnings("SameParameterValue")
+    private static boolean get(@NonNull final Context context, @NonNull final String key) {
+        return getSharedPreferences(context).getBoolean(key, false);
+    }
+
+    @SuppressWarnings("SameParameterValue")
+    private static void put(@NonNull final Context context, @NonNull final String key,
+                            final boolean value) {
+        getSharedPreferences(context)
+                .edit()
+                .putBoolean(key, value)
+                .apply();
     }
 
     public static boolean isBuildVerMinO() {
@@ -53,30 +62,31 @@ public class Utils {
     }
 
     public static boolean isDarkThemeSelected(@NonNull final Context context) {
-        return !context.getSharedPreferences(KEY_INVERT, Context.MODE_PRIVATE)
-                .getBoolean(KEY_INVERT, false);
+        return get(context, KEY_INVERT);
     }
 
     public static boolean isIntentSupported(@Nullable final Activity activity) {
         if (activity != null) {
             final Intent intent = activity.getIntent();
+            final String action = intent.getAction();
 
-            return !TextUtils.isEmpty(intent.getAction()) &&
-                    intent.getAction().equals(Intent.ACTION_SEND);
+            return !TextUtils.isEmpty(action) &&
+                    (action.equals(Intent.ACTION_SEND) ||
+                            action.equals(Intent.ACTION_SEND_MULTIPLE));
         }
         return false;
     }
 
     public static void invertTheme(@Nullable final Activity activity) {
         if (activity != null) {
-            final SharedPreferences prefs =
-                    activity.getSharedPreferences(KEY_INVERT, Context.MODE_PRIVATE);
-
-            prefs.edit()
-                    .putBoolean(KEY_INVERT, !prefs.getBoolean(KEY_INVERT, false))
-                    .apply();
+            put(activity, KEY_INVERT, !get(activity, KEY_INVERT));
             activity.recreate();
         }
+    }
+
+    public static void showSnackbar(@NonNull final View layout, @NonNull final String msg) {
+        Snackbar.make(layout, msg, Snackbar.LENGTH_LONG)
+                .show();
     }
 
     public static void startActivityForResult(@NonNull final Fragment fragment,
@@ -93,7 +103,7 @@ public class Utils {
                     fragment.startActivityForResult(intent, REQUEST_CODE_CREATE_DOCUMENT);
                 }
             } else {
-                Snackbar.make(layout, R.string.no_suitable_activity, Snackbar.LENGTH_LONG).show();
+                showSnackbar(layout, activity.getString(R.string.no_suitable_activity));
             }
         }
     }

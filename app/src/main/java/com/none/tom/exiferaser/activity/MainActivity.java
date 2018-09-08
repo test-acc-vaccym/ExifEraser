@@ -21,6 +21,7 @@ package com.none.tom.exiferaser.activity;
 import android.content.Intent;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.v4.app.Fragment;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 
@@ -28,10 +29,10 @@ import com.none.tom.exiferaser.fragment.MainFragment;
 import com.none.tom.exiferaser.R;
 import com.none.tom.exiferaser.util.Utils;
 
-public class MainActivity extends AppCompatActivity {
-    private boolean mHandled;
+import static com.none.tom.exiferaser.util.Constants.INTENT_EXTRA_HANDLED;
 
-    private MainFragment mFragment;
+public class MainActivity extends AppCompatActivity {
+    private Fragment mFragment;
 
     @Override
     protected void onCreate(@Nullable final Bundle savedInstanceState) {
@@ -47,8 +48,12 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
 
-        if (isIntentSupported()) {
-            getMainFragment().handleSupportedIntent(getIntent());
+        final Intent intent = getIntent();
+
+        if (intent.getBooleanExtra(INTENT_EXTRA_HANDLED, false)) {
+            intent.removeExtra(INTENT_EXTRA_HANDLED);
+        } else if (Utils.isIntentSupported(this)) {
+            getMainFragment().handleIntent(getIntent());
         }
     }
 
@@ -59,20 +64,18 @@ public class MainActivity extends AppCompatActivity {
         setIntent(intent);
     }
 
+    @Override
+    protected void onStop() {
+        super.onStop();
+
+        getIntent().putExtra(INTENT_EXTRA_HANDLED, true);
+    }
+
     @NonNull
     public MainFragment getMainFragment() {
         if (mFragment == null) {
-            mFragment = (MainFragment) getSupportFragmentManager()
-                    .findFragmentById(R.id.FragmentMain);
+            mFragment = getSupportFragmentManager().findFragmentById(R.id.FragmentMain);
         }
-        return mFragment;
-    }
-
-    public void setIntentHandled(final boolean handled) {
-        mHandled = handled;
-    }
-
-    private boolean isIntentSupported() {
-        return mHandled ? mHandled = false : Utils.isIntentSupported(this);
+        return (MainFragment) mFragment;
     }
 }

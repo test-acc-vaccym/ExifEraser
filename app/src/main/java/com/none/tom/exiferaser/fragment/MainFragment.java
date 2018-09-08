@@ -20,6 +20,7 @@ package com.none.tom.exiferaser.fragment;
 
 import android.app.Activity;
 import android.content.ClipData;
+
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.Uri;
@@ -28,7 +29,6 @@ import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.CoordinatorLayout;
-import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
@@ -41,10 +41,12 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import com.none.tom.exiferaser.R;
-import com.none.tom.exiferaser.activity.MainActivity;
 import com.none.tom.exiferaser.task.ExifStripTask;
 import com.none.tom.exiferaser.task.JpegSaveTask;
 import com.none.tom.exiferaser.util.Utils;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static com.none.tom.exiferaser.util.Constants.MIME_TYPE_JPEG;
 import static com.none.tom.exiferaser.util.Constants.QUALITY_DEFAULT;
@@ -56,13 +58,14 @@ public class MainFragment extends Fragment implements ExifStripTask.Callback,
                                                       QualityFragment.Callback {
     private AsyncTask<Void, Void, ?> mAsyncTask;
     private Bitmap mBitmap;
+    private List<Uri> mUris;
 
     private CoordinatorLayout mLayout;
     private TextView mDescription;
     private ProgressBar mSpinner;
 
     private int mQuality;
-    private Uri mUri;
+    private int mIndex;
 
     @Override
     public void onCreate(@Nullable final Bundle savedInstanceState) {
@@ -83,7 +86,7 @@ public class MainFragment extends Fragment implements ExifStripTask.Callback,
         mSpinner = mLayout.findViewById(R.id.Spinner);
 
         mLayout.findViewById(R.id.InsertPictureFab).setOnClickListener(view -> {
-            if (!isTaskRunning()) {
+            if (mAsyncTask == null) {
                 startActivityForResult(Intent.ACTION_OPEN_DOCUMENT, null);
             }
         });
@@ -94,8 +97,8 @@ public class MainFragment extends Fragment implements ExifStripTask.Callback,
     public void onActivityCreated(@Nullable final Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
 
-        if (savedInstanceState != null && isTaskRunning()) {
-            setTaskLoading(true);
+        if (savedInstanceState != null && mAsyncTask != null) {
+            updateViewVisibility(true);
         }
     }
 
@@ -108,7 +111,7 @@ public class MainFragment extends Fragment implements ExifStripTask.Callback,
 
     @Override
     public boolean onOptionsItemSelected(@NonNull final MenuItem item) {
-        if (isTaskRunning()) {
+        if (mAsyncTask != null) {
             return super.onOptionsItemSelected(item);
         }
 
@@ -134,24 +137,23 @@ public class MainFragment extends Fragment implements ExifStripTask.Callback,
         super.onActivityResult(requestCode, resultCode, resultData);
 
         if (resultCode == Activity.RESULT_OK) {
-            mUri = resultData.getData();
+            final Uri uri = resultData.getData();
 
-            if (mUri != null) {
+            if (uri != null) {
                 if (requestCode == REQUEST_CODE_OPEN_DOCUMENT) {
-                    mAsyncTask = new ExifStripTask(this, mUri);
+                    mAsyncTask = new ExifStripTask(this, uri);
                     mAsyncTask.execute();
 
-                    setTaskLoading(true);
-                    setIntentHandled(true);
+                    updateViewVisibility(true);
                 } else if (requestCode == REQUEST_CODE_CREATE_DOCUMENT) {
                     mSpinner.setVisibility(View.VISIBLE);
-                    mAsyncTask = new JpegSaveTask(this, mBitmap, mUri, mQuality);
+
+                    mAsyncTask = new JpegSaveTask(this, mBitmap, uri, mQuality);
                     mAsyncTask.execute();
                 }
             }
         } else if (resultCode == Activity.RESULT_CANCELED) {
-            setIntentHandled(Utils.isIntentSupported(getActivity()));
-            setTaskLoading(false);
+            updateViewVisibility(false);
         }
     }
 
@@ -168,61 +170,53 @@ public class MainFragment extends Fragment implements ExifStripTask.Callback,
 
             startActivityForResult(Intent.ACTION_CREATE_DOCUMENT, result.getDisplayName());
         } else {
-            setIntentHandled(false);
-            setTaskLoading(false);
+            Utils.showSnackbar(mLayout, result.containsExif() ?
+                    getString(R.string.exif_strip_failed) :
+                    getString(R.string.exif_already_stripped));
 
-            Snackbar.make(mLayout, result.containsExif() ?
-                    R.string.exif_strip_failed :
-                    R.string.exif_already_stripped, Snackbar.LENGTH_LONG)
-                    .show();
+            handleMultipleUris();
         }
     }
 
     @Override
     public void onJpegSaveResult(final boolean saved) {
-        setIntentHandled(false);
-        setTaskLoading(false);
+        Utils.showSnackbar(mLayout, saved ?
+                getString(R.string.picture_saved) :
+                getString(R.string.picture_save_failed));
 
-        Snackbar.make(mLayout, saved ?
-                R.string.picture_saved :
-                R.string.picture_save_failed, Snackbar.LENGTH_LONG)
-                .show();
+        handleMultipleUris();
     }
 
-    @SuppressWarnings("unchecked")
-    public void handleSupportedIntent(@NonNull final Intent intent) {
-        final ClipData clipData = intent.getClipData();
+    public void handleIntent(@NonNull final Intent intent) {
+        if (mAsyncTask == null) {
+            final ClipData clipData = intent.getClipData();
+            final int itemCnt = clipData != null ? clipData.getItemCount() : 0;
 
-        if (clipData != null && clipData.getItemCount() > 0) {
-            mUri = clipData.getItemAt(0).getUri();
+            if (itemCnt > 0) {
+                updateViewVisibility(true);
 
-            mAsyncTask = new ExifStripTask(this, mUri);
+                mUris = new ArrayList<>(itemCnt);
+
+                for (int i = 0; i < itemCnt; i++) {
+                    mUris.add(clipData.getItemAt(i).getUri());
+                }
+
+                mAsyncTask = new ExifStripTask(this, mUris.get(mIndex++));
+                mAsyncTask.execute();
+            }
+        }
+    }
+
+    private void handleMultipleUris() {
+        if (mUris != null && mIndex < mUris.size()) {
+            mAsyncTask = new ExifStripTask(this, mUris.get(mIndex++));
             mAsyncTask.execute();
-
-            setTaskLoading(true);
-            setIntentHandled(true);
-        }
-    }
-
-    private void setIntentHandled(final boolean handled) {
-        final MainActivity activity = (MainActivity) getActivity();
-
-        if (activity != null) {
-            activity.setIntentHandled(handled);
-        }
-    }
-
-    private boolean isTaskRunning() {
-        return mAsyncTask != null && mAsyncTask.getStatus() == AsyncTask.Status.RUNNING;
-    }
-
-    private void setTaskLoading(final boolean loading) {
-        if (loading) {
-            mDescription.setVisibility(View.GONE);
-            mSpinner.setVisibility(View.VISIBLE);
         } else {
-            mSpinner.setVisibility(View.GONE);
-            mDescription.setVisibility(View.VISIBLE);
+            updateViewVisibility(false);
+
+            mAsyncTask = null;
+            mUris = null;
+            mIndex = 0;
         }
     }
 
@@ -231,9 +225,19 @@ public class MainFragment extends Fragment implements ExifStripTask.Callback,
         Utils.startActivityForResult(this, mLayout, new Intent()
                 .setType(MIME_TYPE_JPEG)
                 .setAction(action)
-                .putExtra(Intent.EXTRA_TITLE, (!TextUtils.isEmpty(displayName) ?
-                        displayName.substring(0, displayName.length() - 4) : "") +
-                        '_' +
-                        getString(R.string.stripped)));
+                .putExtra(Intent.EXTRA_TITLE,
+                        (!TextUtils.isEmpty(displayName) ?
+                                displayName.substring(0, displayName.length() - 4) : "") + '_' +
+                                getString(R.string.stripped)));
+    }
+
+    private void updateViewVisibility(final boolean loading) {
+        if (loading) {
+            mDescription.setVisibility(View.GONE);
+            mSpinner.setVisibility(View.VISIBLE);
+        } else {
+            mSpinner.setVisibility(View.GONE);
+            mDescription.setVisibility(View.VISIBLE);
+        }
     }
 }

@@ -37,6 +37,7 @@ import com.none.tom.exiferaser.util.Utils;
 
 import org.apache.sanselan.ImageReadException;
 import org.apache.sanselan.ImageWriteException;
+import org.apache.sanselan.Sanselan;
 import org.apache.sanselan.formats.jpeg.exifRewrite.ExifRewriter;
 
 import java.io.ByteArrayOutputStream;
@@ -95,7 +96,7 @@ public class ExifStripTask extends AsyncTask<Void, Void, ExifStripTask.Result> {
                     byte[] jpeg = out.toByteArray();
                     out.reset();
 
-                    if (Utils.containsExif(jpeg)) {
+                    if (Sanselan.getMetadata(jpeg) != null) {
                         new ExifRewriter().removeExifMetadata(jpeg, out);
 
                         final byte[] jpegStripped = out.toByteArray();

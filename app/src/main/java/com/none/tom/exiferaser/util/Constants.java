@@ -20,8 +20,12 @@ package com.none.tom.exiferaser.util;
 
 @SuppressWarnings("WeakerAccess")
 public class Constants {
+    public static final String KEY_SHARED_PREFS = "shared_prefs";
     public static final String KEY_INVERT = "invert";
     public static final String KEY_QUALITY = "quality";
+
+    public static final String INTENT_EXTRA_HANDLED = "handled";
+
     public static final String MIME_TYPE_JPEG = "image/jpeg";
 
     public static final int QUALITY_DEFAULT = 95;
