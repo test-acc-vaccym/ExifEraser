@@ -50,7 +50,7 @@ public class ExifStripTask extends AsyncTask<Void, Void, ExifStripTask.Result> {
 
     private static final int BUF_SIZE = 16384;
 
-    private final Callback mCallback;
+    private Callback mCallback;
     private Context mContext;
     private final Uri mUri;
 
@@ -151,8 +151,14 @@ public class ExifStripTask extends AsyncTask<Void, Void, ExifStripTask.Result> {
     }
 
     @Override
+    protected void onCancelled(@NonNull final Result result) {
+        mCallback = null;
+    }
+
+    @Override
     protected void onPostExecute(@NonNull final Result result) {
         mCallback.onExifStripResult(result);
+        mCallback = null;
     }
 
     private int getBytesPerPixel(@NonNull final Bitmap.Config config) {

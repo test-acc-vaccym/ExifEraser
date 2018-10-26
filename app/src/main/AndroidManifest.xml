@@ -11,6 +11,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         android:largeHeap="true"
+        android:name=".app.ExifEraser"
         tools:ignore="GoogleAppIndexingWarning">
 
         <activity

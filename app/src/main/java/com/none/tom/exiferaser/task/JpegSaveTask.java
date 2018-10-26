@@ -35,7 +35,7 @@ public class JpegSaveTask extends AsyncTask<Void, Void, Boolean> {
     private final int mQuality;
 
     private final Bitmap mBitmap;
-    private final Callback mCallback;
+    private Callback mCallback;
     private Context mContext;
     private final Uri mUri;
 
@@ -82,8 +82,14 @@ public class JpegSaveTask extends AsyncTask<Void, Void, Boolean> {
     }
 
     @Override
+    protected void onCancelled(@NonNull final Boolean saved) {
+        mCallback = null;
+    }
+
+    @Override
     protected void onPostExecute(@NonNull final Boolean saved) {
         mCallback.onJpegSaveResult(saved);
+        mCallback = null;
     }
 
     public interface Callback {

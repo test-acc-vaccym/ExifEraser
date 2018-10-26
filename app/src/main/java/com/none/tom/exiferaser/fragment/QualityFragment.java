@@ -39,8 +39,6 @@ import static com.none.tom.exiferaser.util.Constants.QUALITY_DEFAULT;
 public class QualityFragment extends DialogFragment {
     static final String TAG = QualityFragment.class.getSimpleName();
 
-    private static QualityFragment sQualityFragment;
-
     private Callback mCallback;
     private int mQuality;
 
@@ -104,21 +102,14 @@ public class QualityFragment extends DialogFragment {
     }
 
     @NonNull
-    static QualityFragment getInstance(final int quality) {
-        if (sQualityFragment == null) {
-            sQualityFragment = new QualityFragment();
-            final Bundle args = new Bundle();
+    static QualityFragment newInstance(final int quality) {
+        final QualityFragment qualityFragment = new QualityFragment();
+        final Bundle args = new Bundle();
 
-            args.putInt(KEY_QUALITY, quality);
-            sQualityFragment.setArguments(args);
-        } else {
-            final Bundle args = sQualityFragment.getArguments();
-            if (args != null) {
-                args.clear();
-                args.putInt(KEY_QUALITY, quality);
-            }
-        }
-        return sQualityFragment;
+        args.putInt(KEY_QUALITY, quality);
+        qualityFragment.setArguments(args);
+
+        return qualityFragment;
     }
 
     private int roundtoMultipleOf5(final float value) {

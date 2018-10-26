@@ -119,7 +119,7 @@ public class MainFragment extends Fragment implements ExifStripTask.Callback,
             case R.id.action_quality:
                 if (getFragmentManager() != null) {
                     QualityFragment
-                            .getInstance(mQuality)
+                            .newInstance(mQuality)
                             .show(getFragmentManager(), QualityFragment.TAG);
                 }
                 return true;
@@ -154,6 +154,15 @@ public class MainFragment extends Fragment implements ExifStripTask.Callback,
             }
         } else if (resultCode == Activity.RESULT_CANCELED) {
             updateViewVisibility(false);
+        }
+    }
+
+    @Override
+    public void onDetach() {
+        super.onDetach();
+
+        if (mAsyncTask != null) {
+            mAsyncTask.cancel(true);
         }
     }
 
