@@ -22,10 +22,10 @@ import android.app.Activity;
 import android.app.Dialog;
 import android.content.Context;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v4.app.DialogFragment;
-import android.support.v7.app.AlertDialog;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.DialogFragment;
+import androidx.appcompat.app.AlertDialog;
 import android.view.View;
 import android.widget.SeekBar;
 import android.widget.TextView;
@@ -36,6 +36,7 @@ import com.none.tom.exiferaser.activity.MainActivity;
 import static com.none.tom.exiferaser.util.Constants.KEY_QUALITY;
 import static com.none.tom.exiferaser.util.Constants.QUALITY_DEFAULT;
 
+@SuppressWarnings("WeakerAccess")
 public class QualityFragment extends DialogFragment {
     static final String TAG = QualityFragment.class.getSimpleName();
 
